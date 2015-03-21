@@ -131,7 +131,6 @@ require 'bigdecimal'
 require 'forwardable'
 require 'rational'
 require 'monitor'
-require 'ostruct'
 
 module Flt
 
@@ -4145,20 +4144,36 @@ class Num < Numeric
       end
     end
 
+    PARSER_ATTRIBUTES_BASE_10 = %i{
+      sign
+      int
+      frac
+      onlyfrac
+      exp
+      signal
+      diag
+      base
+    }.freeze
+
+    PARSER_ATTRIBUTES_BASE_16 = (PARSER_ATTRIBUTES_BASE_10 + [:exp_base]).freeze
+
     # Parse numeric text literals (internal use)
     def _parser(txt, options={})
       base = options[:base]
       md = /^\s*([-+])?(?:(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:E([-+]?\d+))?|Inf(?:inity)?|(s)?NaN(\d*))\s*$/i.match(txt)
       if md
         base ||= 10
-        OpenStruct.new :sign=>md[1], :int=>md[2], :frac=>md[3], :onlyfrac=>md[4], :exp=>md[5],
-                       :signal=>md[6], :diag=>md[7], :base=>base
+        Struct.new(*PARSER_ATTRIBUTES_BASE_10).new(
+          md[1], md[2], md[3], md[4], md[5], md[6], md[7], base
+        )
       else
         md = /^\s*([-+])?0x(?:(?:([\da-f]+)(?:\.([\da-f]*))?|\.([\da-f]+))(?:P([-+]?\d+))?)\s*$/i.match(txt)
         if md
           base = 16
-          OpenStruct.new :sign=>md[1], :int=>md[2], :frac=>md[3], :onlyfrac=>md[4], :exp=>md[5],
-                         :signal=>nil, :diag=>nil, :base=>base, :exp_base=>2
+
+          Struct.new(*PARSER_ATTRIBUTES_BASE_10).new(
+            md[1], md[2], md[3], md[4], md[5], nil, nil, base, 2
+          )
         end
       end
     end
